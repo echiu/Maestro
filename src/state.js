@@ -1,8 +1,16 @@
 
 export default class State 
 {
+    normalizeDistribution(list)
+    {
+        var normalizedList = list.slice(0);
+        var magnitude = 0.0;
+        for (var i = 0; i < list.length; i++) { magnitude += list[i]; }
+        for (var i = 0; i < normalizedList.length; i++) { normalizedList[i] /= magnitude; }
+        return normalizedList;
+    }
 
-    constructor(root, mode, degree, numKeys)
+    constructor(root, mode, numKeys, bpm)
     {
         // modes
         // ionian is typical major scale, aeolian is typical minor scale
@@ -43,15 +51,33 @@ export default class State
                     + " does not add up to 1.0.");
             }
         }
-    
+        
+        // inverse the progression DFA so you always end on I
+        // work backwards 
+        this.inverseProgressions = [];
+        for (var i = 0; i < this.progressions[0].length; i++)
+        {
+            var inverse = [this.progressions[0][i],
+                           this.progressions[1][i],
+                           this.progressions[2][i],
+                           this.progressions[3][i],
+                           this.progressions[4][i],
+                           this.progressions[5][i],
+                           this.progressions[6][i]];
+            var normalizedInverse = this.normalizeDistribution(inverse);
+            this.inverseProgressions[i] = normalizedInverse.slice(0);
+        }
+
         // starting note of the scale, index on the piano keyboard
         this.root = root;
         // mode, the type of scale: ionian, dorian, etc.
         this.mode = mode;
+
         // degree, location on the scale
         // I   II  III  IV  V   VI  VII
         // 0   1    2   3   4   5    6
-        this.degree = degree;
+        // this.degree = degree;
+
         // number of keys on the piano keyboard
         this.numKeys = numKeys;
 
@@ -59,19 +85,19 @@ export default class State
         this.minNotes = 2;
         this.maxNotes = 6;
 
-        this.beatsPerMeasure = 4;
+        this.beatsPerMeasure = bpm;
     }
 
 
-    doNewProgression(startDegree, minChords)
+    doNewProgression(startDegree, numChords)
     {
-        var progressionList = [];
+        var progressionList = [startDegree];
         var currDegree = startDegree;
 
-        while(currDegree != 0 || progressionList.length < minChords)
+        while (progressionList.length < numChords)
         {
 
-            var progressionOptions = this.progressions[currDegree];
+            var progressionOptions = this.inverseProgressions[currDegree];
             var newDegree = currDegree;
             
             var seed = Math.random();
@@ -102,7 +128,7 @@ export default class State
                 note3 += currMode[i % currMode.length];
             }
 
-            progressionList.push(newDegree);
+            progressionList.unshift(newDegree);
             currDegree = newDegree;
         }
 
@@ -113,8 +139,10 @@ export default class State
 
     doNewHarmony(degree)
     {
+
         // find new degree chord notes in piano keyboard indices 
         var currMode = this.modes[this.mode];
+
         var note1 = this.root;
         for (var i = 0; i < degree; i++) {
             note1 += currMode[i];
@@ -173,7 +201,7 @@ export default class State
     }
 
 
-    doNewRhythm(possibleNotes)
+    doNewRhythm(possibleNotes, melodyFreq)
     {
         var possibleHarmonyNotes = possibleNotes[0].slice(0); // slice makes a copy
         var possibleMelodyNotes = possibleNotes[1].slice(0); // slice makes a copy
@@ -216,7 +244,7 @@ export default class State
         var playedMelodyNotes = [];
         for (var i = 0; i < 12; i++)
         {
-            if (Math.random() < 0.4)
+            if (Math.random() < melodyFreq)
             {
                 var numNotesAtOnce = Math.floor(Math.random() * 2) + 1; // gives a range of 1 to 3
                 var notesAtOnce = [];
@@ -240,9 +268,66 @@ export default class State
         return [playedHarmonyNotes, playedMelodyNotes];
     }
 
+    doNewLSystem(numIterations)
+    {
+        var finalSystem = [0];
+        var dictSystem = [];
+
+        for (var i = 0; i < numIterations; i++)
+        {
+            console.log("i = " + i);
+            var newFinalSystem = [];
+            console.log("length of finalSystem: " + finalSystem.length);
+            for (var letterIndex = 0; letterIndex < finalSystem.length; letterIndex++)
+            {
+                console.log("letterIndex = " + letterIndex);
+                console.log((finalSystem[letterIndex] in dictSystem));
+
+                // check if need to make a new grammar rule for this letter
+                if (typeof dictSystem[finalSystem[letterIndex]] === 'undefined')
+                {
+                    var newLetter = Math.max( Math.max.apply(null, finalSystem), Math.max.apply(null, newFinalSystem)) + 1;
+
+                    if (Math.random() < 0.5)
+                    {
+                        // binary music structure form
+                        dictSystem[ finalSystem[letterIndex] ] = [newLetter, newLetter, newLetter + 1, newLetter + 1];
+                        newFinalSystem.push(newLetter);
+                        newFinalSystem.push(newLetter);
+                        newFinalSystem.push(newLetter+1);
+                        newFinalSystem.push(newLetter+1);
+                    }
+                    else
+                    {
+                        // ternary music structure form
+                        dictSystem[ finalSystem[letterIndex] ] = [newLetter, newLetter + 1, newLetter];
+                        newFinalSystem.push(newLetter);
+                        newFinalSystem.push(newLetter+1);
+                        newFinalSystem.push(newLetter);
+                    }
+                }
+                // else grammar rule already exists for this letter
+                else
+                {
+                    var oldRule = dictSystem[ finalSystem[letterIndex] ];
+                    console.log("oldRule " + JSON.stringify(oldRule));
+                    for (var oldRuleIndex = 0; oldRuleIndex < oldRule.length; oldRuleIndex++)
+                    {
+                        console.log("oldRuleIndex " + oldRuleIndex);
+                        newFinalSystem.push(oldRule[oldRuleIndex]);
+                    }
+                }
+            }
+            finalSystem = newFinalSystem.slice(0);
+            console.log("finalSystem after " + i + " iterations: " + JSON.stringify(finalSystem));
+            console.log("");
+        }
+
+        return finalSystem;
+    }
 
 
-
+    ////////////////////////////////// UNUSED CODE ////////////////////////////////////
 
 
     doProgression()
@@ -404,16 +489,6 @@ export default class State
 
         var output = [outputNotes, outputCount];
         return output;
-    }
-
-
-    normalizeDistribution(list)
-    {
-        var normalizedList = list.slice(0);
-        var magnitude = 0.0;
-        for (var i = 0; i < list.length; i++) { magnitude += list[i]; }
-        for (var i = 0; i < normalizedList.length; i++) { normalizedList[i] /= magnitude; }
-        return normalizedList;
     }
 
 
