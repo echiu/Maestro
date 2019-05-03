@@ -181,7 +181,7 @@ function onLoad(framework)
   gui.width = 400;
   gui.add(sliders, 'key', { C:40, D:41, E:42, F:43, G:37, A:38, B:39 } ).name("Key");
   gui.add(sliders, 'mode', { Ionian:0, Dorian:1, Phrygian:2, Lydian:3, Mixolydian:4, Aeolian:5, Locrian:6 } ).name("Mode");
-  gui.add(sliders, 'bpm', { 3:3, 4:4, 6:6, 12:12 } ).name("Beats Per Measure");
+  gui.add(sliders, 'bpm', { 2:2, 3:3, 4:4, 6:6, 12:12 } ).name("Beats Per Measure");
   gui.add(sliders, 'length', { Short:1, Medium:2, Long:3 } ).name("Length");
   gui.add(sliders, 'speed', 200.0, 600.0).step(50.0).name("Speed");
   gui.add(sliders, 'progressionComplexity', 1.0, 12.0).step(1.0).name("Progression Complexity");
